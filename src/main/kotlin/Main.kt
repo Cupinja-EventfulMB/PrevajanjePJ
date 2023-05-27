@@ -605,7 +605,7 @@ class Parser(private val scanner: Scanner) {
     }
 
     fun Institution(): Boolean {
-        if (recognizeTerminal(INSTITUTION) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations() && Address() && Block() && recognizeTerminal(RCPAREN)) {
+        if (recognizeTerminal(INSTITUTION) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations() && Address() && Events() && Block() && recognizeTerminal(RCPAREN)) {
             insideVariableStringMap.clear()
             insideVariableIntMap.clear()
             insideVariableCoordPair.clear()
@@ -873,11 +873,28 @@ class Parser(private val scanner: Scanner) {
         } else return false
     }
 
+    private fun Events(): Boolean {
+        if (recognizeTerminal(EVENTS) && recognizeTerminal(ASSIGN)) {
+            if (recognizeTerminal(INT)) {
+                return true
+            } else if (last?.symbol == VAR) {
+                val stringValue = last?.lexeme
+                recognizeTerminal(VAR)
+                var foundValue = insideVariableIntMap.keys.find { it == stringValue }
+                if (foundValue == null) {
+                    foundValue = variableIntMap.keys.find { it == stringValue }
+                }
+                return foundValue != null
+            } else return false
+        } else return false
+    }
+
     private fun recognizeTerminal(value: Int) =
         if (last?.symbol == value) {
             last = scanner.getToken()
             true
         } else false
+
 }
 
 fun main(args: Array<String>) {

@@ -12,6 +12,7 @@ city "Maribor City 123" {
 
     institution "SNG" {
         address = A
+        events = C
         block(D,(3,4),(5,6),(7,8))
     }
 
