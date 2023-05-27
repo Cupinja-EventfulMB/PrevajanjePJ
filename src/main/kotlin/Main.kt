@@ -34,6 +34,7 @@ const val ADDRESS = 23
 const val DEC_STRING = 24
 const val DEC_INT = 25
 const val DEC_COORD = 26
+const val EVENTS = 27
 const val CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const val STRING_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789.,"
 const val NUMBER_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -49,10 +50,10 @@ interface DFA {
 }
 
 object ForForeachFFFAutomaton: DFA {
-    override val states = (1 .. 86).toSet()
+    override val states = (1 .. 91).toSet()
     override val alphabet = 0 .. 255
     override val startState = 1
-    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 85, 86)
+    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 90, 91)
 
     private val numberOfStates = states.max() + 1 // plus the ERROR_STATE
     private val numberOfCodes = alphabet.max() + 1 // plus the EOF
@@ -363,17 +364,35 @@ object ForForeachFFFAutomaton: DFA {
         }
         setSymbol(84, DEC_COORD)
 
+        // Events
+        setTransition(1, 'e', 84)
+        setTransition(84, 'v', 85)
+        setTransition(85, 'e', 86)
+        setTransition(86, 'n', 87)
+        setTransition(87, 't', 88)
+        setTransition(88, 's', 89)
+
+        for(character in CHARS){
+            if (character != 'v') setTransition(84, character, 3)
+            if (character != 'e') setTransition(85, character, 3)
+            if (character != 'n') setTransition(86, character, 3)
+            if (character != 't') setTransition(87, character, 3)
+            if (character != 's') setTransition(88, character, 3)
+            if (character != ' ') setTransition(89, character, 3)
+        }
+        setSymbol(89, EVENTS)
+
 
         // ignore [\n\r\t ]+
-        setTransition(1,'\n',85)
-        setTransition(1,'\r',85)
-        setTransition(1,'\t',85)
-        setTransition(1,' ',85)
-        setSymbol(85,SKIP_SYMBOL)
+        setTransition(1,'\n',90)
+        setTransition(1,'\r',90)
+        setTransition(1,'\t',90)
+        setTransition(1,' ',90)
+        setSymbol(90,SKIP_SYMBOL)
 
         // EOF
-        setTransition(1,-1,86)
-        setSymbol(86,EOF_SYMBOL)
+        setTransition(1,-1,91)
+        setSymbol(91,EOF_SYMBOL)
 
     }
 }
@@ -454,6 +473,7 @@ fun name(symbol: Int) =
         DEC_STRING -> "stringVar"
         DEC_COORD -> "coordinateVar"
         DEC_INT -> "intVar"
+        EVENTS -> "events"
         else -> throw Error("Invalid symbol")
     }
 
