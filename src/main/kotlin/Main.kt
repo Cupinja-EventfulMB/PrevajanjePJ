@@ -38,6 +38,8 @@ const val FST = 28
 const val SND = 29
 const val LAKE = 30
 const val CIRCLE = 31
+const val IF = 32
+const val ELSE = 33
 const val CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const val STRING_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789.,"
 const val NUMBER_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -53,10 +55,10 @@ interface DFA {
 }
 
 object ForForeachFFFAutomaton: DFA {
-    override val states = (1 .. 103).toSet()
+    override val states = (1 .. 107).toSet()
     override val alphabet = 0 .. 255
     override val startState = 1
-    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 97, 101, 102, 103)
+    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 97, 101, 102, 105, 106, 107)
 
     private val numberOfStates = states.max() + 1 // plus the ERROR_STATE
     private val numberOfCodes = alphabet.max() + 1 // plus the EOF
@@ -207,7 +209,7 @@ object ForForeachFFFAutomaton: DFA {
         setTransition(38, 'n', 39)
 
         for(character in CHARS){
-            if ((character != 'n') && (character != 't')) setTransition(29, character, 3)
+            if ((character != 'n') && (character != 't') && (character != 'f')) setTransition(29, character, 3)
             if (character != 's') setTransition(30, character, 3)
             if (character != 't') setTransition(31, character, 3)
             if (character != 'i') setTransition(32, character, 3)
@@ -376,7 +378,7 @@ object ForForeachFFFAutomaton: DFA {
         setTransition(88, 's', 89)
 
         for(character in CHARS){
-            if (character != 'v') setTransition(84, character, 3)
+            if ((character != 'v') && (character != 'l')) setTransition(84, character, 3)
             if (character != 'e') setTransition(85, character, 3)
             if (character != 'n') setTransition(86, character, 3)
             if (character != 't') setTransition(87, character, 3)
@@ -433,16 +435,36 @@ object ForForeachFFFAutomaton: DFA {
         }
         setSymbol(101, CIRCLE)
 
+        // if
+        setTransition(29, 'f', 102)
+        for(character in CHARS){
+            if (character != ' ') setTransition(102, character, 3)
+        }
+
+        setSymbol(102, IF)
+
+        // else
+        setTransition(84, 'l', 103)
+        setTransition(103, 's', 104)
+        setTransition(104, 'e', 105)
+        for(character in CHARS){
+            if (character != 's') setTransition(103, character, 3)
+            if (character != 'e') setTransition(104, character, 3)
+            if (character != ' ') setTransition(105, character, 3)
+        }
+
+        setSymbol(105, ELSE)
+
         // ignore [\n\r\t ]+
-        setTransition(1,'\n',102)
-        setTransition(1,'\r',102)
-        setTransition(1,'\t',102)
-        setTransition(1,' ',102)
-        setSymbol(102,SKIP_SYMBOL)
+        setTransition(1,'\n',106)
+        setTransition(1,'\r',106)
+        setTransition(1,'\t',106)
+        setTransition(1,' ',106)
+        setSymbol(106,SKIP_SYMBOL)
 
         // EOF
-        setTransition(1,-1,103)
-        setSymbol(103,EOF_SYMBOL)
+        setTransition(1,-1,107)
+        setSymbol(107,EOF_SYMBOL)
 
     }
 }
@@ -528,6 +550,8 @@ fun name(symbol: Int) =
         SND -> "second"
         LAKE -> "lake"
         CIRCLE -> "circle"
+        IF -> "if"
+        ELSE -> "else"
         else -> throw Error("Invalid symbol")
     }
 
