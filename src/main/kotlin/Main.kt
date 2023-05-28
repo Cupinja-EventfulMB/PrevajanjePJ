@@ -35,6 +35,8 @@ const val DEC_STRING = 24
 const val DEC_INT = 25
 const val DEC_COORD = 26
 const val EVENTS = 27
+const val FST = 28
+const val SND = 29
 const val CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const val STRING_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789.,"
 const val NUMBER_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -50,10 +52,10 @@ interface DFA {
 }
 
 object ForForeachFFFAutomaton: DFA {
-    override val states = (1 .. 91).toSet()
+    override val states = (1 .. 96).toSet()
     override val alphabet = 0 .. 255
     override val startState = 1
-    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 90, 91)
+    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 95, 96)
 
     private val numberOfStates = states.max() + 1 // plus the ERROR_STATE
     private val numberOfCodes = alphabet.max() + 1 // plus the EOF
@@ -165,7 +167,7 @@ object ForForeachFFFAutomaton: DFA {
         setTransition(22, 't', 23)
 
         for(character in CHARS){
-            if ((character != 't') && (character != 'q')) setTransition(18, character, 3)
+            if ((character != 't') && (character != 'q') && (character != 'n')) setTransition(18, character, 3)
             if ((character != 'r') && (character != 'a')) setTransition(19, character, 3)
             if ((character != 'e') && (character !='i')) setTransition(20, character, 3)
             if (character != 'e') setTransition(21, character, 3)
@@ -364,7 +366,7 @@ object ForForeachFFFAutomaton: DFA {
         }
         setSymbol(84, DEC_COORD)
 
-        // Events
+        // events
         setTransition(1, 'e', 84)
         setTransition(84, 'v', 85)
         setTransition(85, 'e', 86)
@@ -382,17 +384,38 @@ object ForForeachFFFAutomaton: DFA {
         }
         setSymbol(89, EVENTS)
 
+        // fst
+        setTransition(1, 'f', 90)
+        setTransition(90, 's', 91)
+        setTransition(91, 't', 92)
+
+        for(character in CHARS){
+            if (character != 's') setTransition(90, character, 3)
+            if (character != 't') setTransition(91, character, 3)
+            if (character != ' ') setTransition(92, character, 3)
+        }
+        setSymbol(92, FST)
+
+        // snd
+        setTransition(18, 'n', 93)
+        setTransition(93, 'd', 94)
+
+        for(character in CHARS){
+            if (character != 'd') setTransition(93, character, 3)
+            if (character != ' ') setTransition(94, character, 3)
+        }
+        setSymbol(94, SND)
 
         // ignore [\n\r\t ]+
-        setTransition(1,'\n',90)
-        setTransition(1,'\r',90)
-        setTransition(1,'\t',90)
-        setTransition(1,' ',90)
-        setSymbol(90,SKIP_SYMBOL)
+        setTransition(1,'\n',95)
+        setTransition(1,'\r',95)
+        setTransition(1,'\t',95)
+        setTransition(1,' ',95)
+        setSymbol(95,SKIP_SYMBOL)
 
         // EOF
-        setTransition(1,-1,91)
-        setSymbol(91,EOF_SYMBOL)
+        setTransition(1,-1,96)
+        setSymbol(96,EOF_SYMBOL)
 
     }
 }
@@ -474,6 +497,8 @@ fun name(symbol: Int) =
         DEC_COORD -> "coordinateVar"
         DEC_INT -> "intVar"
         EVENTS -> "events"
+        FST -> "first"
+        SND -> "second"
         else -> throw Error("Invalid symbol")
     }
 
@@ -898,7 +923,7 @@ class Parser(private val scanner: Scanner) {
 }
 
 fun main(args: Array<String>) {
-    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
+    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\marij\\Desktop\\Praktikum\\Git_Prevajanje\\PrevajanjePJ\\src\\test.txt").inputStream())).parse()) {
         println("accept")
     } else {
         println("reject")
