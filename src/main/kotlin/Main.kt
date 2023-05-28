@@ -750,6 +750,38 @@ class Parser(private val scanner: Scanner) {
                         return (recognizeTerminal(INT) && recognizeTerminal(RPAREN))
                     } else return false
                 } else return false
+            } else if (First()) {
+                if (recognizeTerminal(COMMA)) {
+                    if (last?.symbol == VAR) {
+                        val secondStringValue = last?.lexeme
+                        recognizeTerminal(VAR)
+                        var secondFoundValue = insideVariableIntMap[secondStringValue]
+                        if (secondFoundValue == null) {
+                            secondFoundValue = variableIntMap[secondStringValue]
+                        }
+                        if (secondFoundValue != null) {
+                            return recognizeTerminal(RPAREN)
+                        } else return false
+                    } else if (last?.symbol == INT) {
+                        return (recognizeTerminal(INT) && recognizeTerminal(RPAREN))
+                    } else return (First() || Second())
+                } else return false
+            } else if (Second()) {
+                if (recognizeTerminal(COMMA)) {
+                    if (last?.symbol == VAR) {
+                        val secondStringValue = last?.lexeme
+                        recognizeTerminal(VAR)
+                        var secondFoundValue = insideVariableIntMap[secondStringValue]
+                        if (secondFoundValue == null) {
+                            secondFoundValue = variableIntMap[secondStringValue]
+                        }
+                        if (secondFoundValue != null) {
+                            return recognizeTerminal(RPAREN)
+                        } else return false
+                    } else if (last?.symbol == INT) {
+                        return (recognizeTerminal(INT) && recognizeTerminal(RPAREN))
+                    } else return (First() || Second())
+                } else return false
             } else return false
         } else if (last?.symbol == VAR) {
             val stringValue = last?.lexeme
@@ -914,6 +946,39 @@ class Parser(private val scanner: Scanner) {
         } else return false
     }
 
+    private fun First(): Boolean {
+        if(recognizeTerminal(FST) && recognizeTerminal(LPAREN)) {
+            if (last?.symbol == VAR) {
+                val stringValue = last?.lexeme
+                recognizeTerminal(VAR)
+                var foundValue = insideVariableCoordPair.find { it.name == stringValue }
+                if (foundValue == null) {
+                    foundValue = variableCoordPair.find { it.name == stringValue }
+                    recognizeTerminal(RPAREN)
+                }
+                return foundValue != null
+            }
+            return false
+        }
+        return false
+    }
+
+    private fun Second(): Boolean {
+        if(recognizeTerminal(SND) && recognizeTerminal(LPAREN)) {
+            if (last?.symbol == VAR) {
+                val stringValue = last?.lexeme
+                recognizeTerminal(VAR)
+                var foundValue = insideVariableCoordPair.find { it.name == stringValue }
+                if (foundValue == null) {
+                    foundValue = variableCoordPair.find { it.name == stringValue }
+                }
+                return foundValue != null
+            }
+            return false
+        }
+        return false
+    }
+
     private fun recognizeTerminal(value: Int) =
         if (last?.symbol == value) {
             last = scanner.getToken()
@@ -923,7 +988,7 @@ class Parser(private val scanner: Scanner) {
 }
 
 fun main(args: Array<String>) {
-    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\marij\\Desktop\\Praktikum\\Git_Prevajanje\\PrevajanjePJ\\src\\test.txt").inputStream())).parse()) {
+    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
         println("accept")
     } else {
         println("reject")

@@ -7,7 +7,7 @@ city "Maribor City 123" {
     street "Smetanova ulica" {
         int C = 12
         bend((1,2),(3,4), C)
-        line((1,2),(3,4))
+        line((1,2),(fst(D),4))
     }
 
     institution "SNG" {
