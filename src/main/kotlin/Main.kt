@@ -761,7 +761,7 @@ class Parser(private val scanner: Scanner) {
     // IfElse' ::= else { Operations } | e
     fun IfElse(): Boolean {
         if (recognizeTerminal(IF) && recognizeTerminal(LPAREN) && IntExpr().first && recognizeTerminal(EQUALS) && IntExpr().first && recognizeTerminal(
-            RPAREN) && recognizeTerminal(LCPAREN) && Operations() && recognizeTerminal(RCPAREN)) {
+                RPAREN) && recognizeTerminal(LCPAREN) && Operations() && recognizeTerminal(RCPAREN)) {
             if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations() && recognizeTerminal(RCPAREN)) {
                 return true
             }
