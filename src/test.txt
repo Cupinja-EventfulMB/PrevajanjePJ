@@ -20,8 +20,11 @@ city "Maribor City 123" {
         block((1,2),(3,4),(5,6),(7,8))
     }
 
-    statue "Glavni"{
+    statue "Jezero"{
         point(1,2)
     }
 
+    lake "Jezero"{
+        circle( (1,2), 3+3)
+    }
 }

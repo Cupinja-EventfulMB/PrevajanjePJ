@@ -56,7 +56,7 @@ object ForForeachFFFAutomaton: DFA {
     override val states = (1 .. 103).toSet()
     override val alphabet = 0 .. 255
     override val startState = 1
-    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 99, 101, 102, 103)
+    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 97, 101, 102, 103)
 
     private val numberOfStates = states.max() + 1 // plus the ERROR_STATE
     private val numberOfCodes = alphabet.max() + 1 // plus the EOF
@@ -409,11 +409,11 @@ object ForForeachFFFAutomaton: DFA {
 
         // Lake
         setTransition(58, 'a', 95)
-        setTransition(95, 'n', 96)
+        setTransition(95, 'k', 96)
         setTransition(96, 'e', 97)
 
         for(character in CHARS){
-            if (character != 'n') setTransition(95, character, 3)
+            if (character != 'k') setTransition(95, character, 3)
             if (character != 'e') setTransition(96, character, 3)
             if (character != ' ') setTransition(97, character, 3)
         }
@@ -676,6 +676,8 @@ class Parser(private val scanner: Scanner) {
             return Squares()
         } else if (last?.symbol == STATUE) {
             return Statues()
+        } else if (last?.symbol == LAKE) {
+            return Lakes()
         } else return false
     }
 
@@ -747,6 +749,21 @@ class Parser(private val scanner: Scanner) {
         } else return false
     }
 
+    fun Lakes(): Boolean {
+        if (Lake() && Lakes())
+            return true
+        else return true
+    }
+
+    fun Lake(): Boolean {
+        if (recognizeTerminal(LAKE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations() && Circle() && recognizeTerminal(RCPAREN)) {
+            insideVariableStringMap.clear()
+            insideVariableIntMap.clear()
+            insideVariableCoordPair.clear()
+            return true
+        } else return false
+    }
+
     fun Point(): Boolean {
         if (recognizeTerminal(POINT)) {
             return Coordinate()
@@ -771,6 +788,13 @@ class Parser(private val scanner: Scanner) {
     fun Line(): Boolean {
         if (recognizeTerminal(LINE)) {
             return recognizeTerminal(LPAREN) && Coordinate() && recognizeTerminal(COMMA) && Coordinate() && recognizeTerminal(RPAREN)
+        }
+        return false
+    }
+
+    fun Circle(): Boolean {
+        if (recognizeTerminal(CIRCLE)) {
+            return recognizeTerminal(LPAREN) && Coordinate() && recognizeTerminal(COMMA) && IntExpr().first && recognizeTerminal(RPAREN)
         }
         return false
     }
@@ -1014,13 +1038,13 @@ class Parser(private val scanner: Scanner) {
 }
 
 fun main(args: Array<String>) {
-    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
+    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\marij\\Desktop\\Praktikum\\Git_Prevajanje\\PrevajanjePJ\\src\\test.txt").inputStream())).parse()) {
         println("accept")
     } else {
         println("reject")
     }
 
-    /* val inputString = "string A = \"This is a string\"" // Update the input string here
+    /*val inputString = "string A = \"This is a string\" circle lake" // Update the input string here
     val inputStream: InputStream = inputString.byteInputStream()
     val scanner = Scanner(ForForeachFFFAutomaton, inputStream)
     printTokens(scanner)  */
