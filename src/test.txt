@@ -2,18 +2,18 @@ city "Maribor City 123" {
     string A = "This is a string"
     string B = "This is the second"
     int C = 12
-    coordinate D = (1,3)
+    coordinate D = (1,3-2)
 
     street "Smetanova ulica" {
         int C = 12
         bend((1,2),(3,4), C)
-        line((1,2),(fst(D),4))
+        line((1,2),(fst(D),4+3))
     }
 
     institution "SNG" {
         address = A
-        events = C
-        block(D,(3,4),(5,6),(7,8))
+        events = 11 + 1
+        block(D,(3 - 1,4),(5,6),(7,8))
     }
 
     square "Glavni"{
