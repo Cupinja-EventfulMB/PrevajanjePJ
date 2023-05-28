@@ -444,14 +444,14 @@ class Scanner(private val automaton: DFA, private val stream: InputStream) {
         var state = automaton.startState
         while (true) {
             val nextState = automaton.next(state, code)
-            if (nextState == ERROR_STATE) break // Longest match
+            if (nextState == ERROR_STATE) break
 
             state = nextState
             updatePosition(code)
             buffer.add(code.toChar())
             code = stream.read()
         }
-        last = code // The code following the current lexeme is the first code of the next lexeme
+        last = code
 
         if (automaton.finalStates.contains(state)) {
             val symbol = automaton.symbol(state)
@@ -559,10 +559,13 @@ class Parser(private val scanner: Scanner) {
     // IntExpr = int IntExpr' | var IntExpr'
     // IntExpr' = + IntExpr | - IntExpr | e
 
-    fun IntExpr(): Boolean {
+    fun IntExpr(): Pair<Boolean, Int?> {
         if (last?.symbol == INT) {
+            val intValue = last?.lexeme?.toInt()
             recognizeTerminal(INT)
-            return IntExprPrime()
+            if (intValue != null) {
+                return IntExprPrime(intValue)
+            }
         } else if (last?.symbol == VAR) {
             val stringValue = last?.lexeme
             recognizeTerminal(VAR)
@@ -571,20 +574,31 @@ class Parser(private val scanner: Scanner) {
                 foundValue = variableIntMap[stringValue]
             }
             if (foundValue != null) {
-                return IntExprPrime()
-            } else return false
-        } else return false
+                return IntExprPrime(foundValue)
+            }
+        }
+        return Pair(false, null)
     }
 
-    fun IntExprPrime(): Boolean {
+    fun IntExprPrime(inValue: Int): Pair<Boolean, Int?> {
         if (last?.symbol == PLUS) {
             recognizeTerminal(PLUS)
-            return IntExpr()
+            val result = IntExpr()
+            if (result.first) {
+                val computedValue = inValue + result.second!!
+                return Pair(true, computedValue)
+            }
         } else if (last?.symbol == MINUS) {
             recognizeTerminal(MINUS)
-            return IntExpr()
-        } else return true
+            val result = IntExpr()
+            if (result.first) {
+                val computedValue = inValue - result.second!!
+                return Pair(true, computedValue)
+            }
+        }
+        return Pair(true, inValue)
     }
+
 
     fun InsideOperations(): Boolean {
         if (InsideOperation() && InsideOperations())
@@ -733,83 +747,35 @@ class Parser(private val scanner: Scanner) {
 
     fun Coordinate(): Boolean {
         if (recognizeTerminal(LPAREN)) {
-            if (last?.symbol == VAR) {
-                val stringValue = last?.lexeme
-                recognizeTerminal(VAR)
-                if (last?.symbol == COMMA) {
-                    var foundValue = insideVariableIntMap[stringValue]
-                    if (foundValue == null) {
-                        foundValue = variableIntMap[stringValue]
-                    }
-                    if (foundValue != null) {
-                        if (recognizeTerminal(COMMA)) {
-                            if (last?.symbol == VAR) {
-                                val secondStringValue = last?.lexeme
-                                recognizeTerminal(VAR)
-                                var secondFoundValue = insideVariableIntMap[secondStringValue]
-                                if (secondFoundValue == null) {
-                                    secondFoundValue = variableIntMap[secondStringValue]
-                                }
-                                if (secondFoundValue != null) {
-                                    return recognizeTerminal(RPAREN)
-                                } else return false
-                            } else if (last?.symbol == INT) {
-                                return (IntExpr() && recognizeTerminal(RPAREN))
-                            } else return false
-                        } else return false
-                    } else return false
-                } else if (last?.symbol == RPAREN) {
-                    recognizeTerminal(RPAREN)
-                    return (variableCoordPair.find { it.name == stringValue } != null) || (insideVariableCoordPair.find { it.name == stringValue } != null)
-                } else return false
-            } else if (last?.symbol == INT) {
-                IntExpr()
+            if (IntExpr().first) {
                 if(recognizeTerminal(COMMA)) {
-                    if (last?.symbol == VAR) {
-                        val secondStringValue = last?.lexeme
-                        recognizeTerminal(VAR)
-                        var secondFoundValue = insideVariableIntMap[secondStringValue]
-                        if (secondFoundValue == null) {
-                            secondFoundValue = variableIntMap[secondStringValue]
-                        }
-                        if (secondFoundValue != null) {
-                            return recognizeTerminal(RPAREN)
-                        } else return false
-                    } else if (last?.symbol == INT) {
-                        return (IntExpr() && recognizeTerminal(RPAREN))
+                    if (IntExpr().first) {
+                        return (recognizeTerminal(RPAREN))
+                    } else if (First()) {
+                        return recognizeTerminal(RPAREN)
+                    } else if (Second()) {
+                        return recognizeTerminal(RPAREN)
                     } else return false
                 } else return false
             } else if (First()) {
                 if (recognizeTerminal(COMMA)) {
-                    if (last?.symbol == VAR) {
-                        val secondStringValue = last?.lexeme
-                        recognizeTerminal(VAR)
-                        var secondFoundValue = insideVariableIntMap[secondStringValue]
-                        if (secondFoundValue == null) {
-                            secondFoundValue = variableIntMap[secondStringValue]
-                        }
-                        if (secondFoundValue != null) {
-                            return recognizeTerminal(RPAREN)
-                        } else return false
-                    } else if (last?.symbol == INT) {
-                        return (IntExpr() && recognizeTerminal(RPAREN))
-                    } else return (First() || Second())
+                    if (IntExpr().first) {
+                        return (recognizeTerminal(RPAREN))
+                    } else if (First()) {
+                        return recognizeTerminal(RPAREN)
+                    } else if (Second()) {
+                        return recognizeTerminal(RPAREN)
+                    } else return false
                 } else return false
             } else if (Second()) {
                 if (recognizeTerminal(COMMA)) {
-                    if (last?.symbol == VAR) {
-                        val secondStringValue = last?.lexeme
-                        recognizeTerminal(VAR)
-                        var secondFoundValue = insideVariableIntMap[secondStringValue]
-                        if (secondFoundValue == null) {
-                            secondFoundValue = variableIntMap[secondStringValue]
-                        }
-                        if (secondFoundValue != null) {
-                            return recognizeTerminal(RPAREN)
-                        } else return false
-                    } else if (last?.symbol == INT) {
-                        return (IntExpr() && recognizeTerminal(RPAREN))
-                    } else return (First() || Second())
+                    if (IntExpr().first) {
+                        return (recognizeTerminal(RPAREN))
+                    } else if (First()) {
+                        return recognizeTerminal(RPAREN)
+                    } else if (Second()) {
+                        return recognizeTerminal(RPAREN)
+                    } else return false
                 } else return false
             } else return false
         } else if (last?.symbol == VAR) {
@@ -934,7 +900,7 @@ class Parser(private val scanner: Scanner) {
     }
 
     private fun Angle(): Boolean {
-        if (IntExpr()) {
+        if (IntExpr().first) {
             return true
         } else if (last?.symbol == VAR) {
             val stringValue = last?.lexeme
@@ -961,7 +927,7 @@ class Parser(private val scanner: Scanner) {
 
     private fun Events(): Boolean {
         if (recognizeTerminal(EVENTS) && recognizeTerminal(ASSIGN)) {
-            if (IntExpr()) {
+            if (IntExpr().first) {
                 return true
             } else if (last?.symbol == VAR) {
                 val stringValue = last?.lexeme
@@ -1000,6 +966,7 @@ class Parser(private val scanner: Scanner) {
                 var foundValue = insideVariableCoordPair.find { it.name == stringValue }
                 if (foundValue == null) {
                     foundValue = variableCoordPair.find { it.name == stringValue }
+                    recognizeTerminal(RPAREN)
                 }
                 return foundValue != null
             }
