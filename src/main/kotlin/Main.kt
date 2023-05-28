@@ -36,6 +36,8 @@ const val DEC_COORD = 26
 const val EVENTS = 27
 const val FST = 28
 const val SND = 29
+const val LAKE = 30
+const val CIRCLE = 31
 const val CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const val STRING_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789.,"
 const val NUMBER_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -51,10 +53,10 @@ interface DFA {
 }
 
 object ForForeachFFFAutomaton: DFA {
-    override val states = (1 .. 96).toSet()
+    override val states = (1 .. 103).toSet()
     override val alphabet = 0 .. 255
     override val startState = 1
-    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 95, 96)
+    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 99, 101, 102, 103)
 
     private val numberOfStates = states.max() + 1 // plus the ERROR_STATE
     private val numberOfCodes = alphabet.max() + 1 // plus the EOF
@@ -150,7 +152,7 @@ object ForForeachFFFAutomaton: DFA {
         setTransition(16, 'y', 17)
 
         for(character in CHARS){
-            if ((character != 'i') && (character != 'o')) setTransition(14, character, 3)
+            if ((character != 'i') && (character != 'o') && (character != 'r')) setTransition(14, character, 3)
             if (character != 't') setTransition(15, character, 3)
             if (character != 'y') setTransition(16, character, 3)
             if (character != ' ') setTransition(17, character, 3)
@@ -283,7 +285,7 @@ object ForForeachFFFAutomaton: DFA {
         setTransition(60, 'e', 61)
 
         for(character in CHARS){
-            if (character != 'i') setTransition(58, character, 3)
+            if ((character != 'i') && (character != 'a')) setTransition(58, character, 3)
             if (character != 'n') setTransition(59, character, 3)
             if (character != 'e') setTransition(60, character, 3)
             if (character != ' ') setTransition(61, character, 3)
@@ -405,16 +407,42 @@ object ForForeachFFFAutomaton: DFA {
         }
         setSymbol(94, SND)
 
+        // Lake
+        setTransition(58, 'a', 95)
+        setTransition(95, 'n', 96)
+        setTransition(96, 'e', 97)
+
+        for(character in CHARS){
+            if (character != 'n') setTransition(95, character, 3)
+            if (character != 'e') setTransition(96, character, 3)
+            if (character != ' ') setTransition(97, character, 3)
+        }
+        setSymbol(97, LAKE)
+
+        // Circle
+        setTransition(15, 'r', 98)
+        setTransition(98, 'c', 99)
+        setTransition(99, 'l', 100)
+        setTransition(100, 'e', 101)
+
+        for(character in CHARS){
+            if (character != 'c') setTransition(98, character, 3)
+            if (character != 'l') setTransition(99, character, 3)
+            if (character != 'e') setTransition(100, character, 3)
+            if (character != ' ') setTransition(101, character, 3)
+        }
+        setSymbol(101, CIRCLE)
+
         // ignore [\n\r\t ]+
-        setTransition(1,'\n',95)
-        setTransition(1,'\r',95)
-        setTransition(1,'\t',95)
-        setTransition(1,' ',95)
-        setSymbol(95,SKIP_SYMBOL)
+        setTransition(1,'\n',102)
+        setTransition(1,'\r',102)
+        setTransition(1,'\t',102)
+        setTransition(1,' ',102)
+        setSymbol(102,SKIP_SYMBOL)
 
         // EOF
-        setTransition(1,-1,96)
-        setSymbol(96,EOF_SYMBOL)
+        setTransition(1,-1,103)
+        setSymbol(103,EOF_SYMBOL)
 
     }
 }
@@ -498,6 +526,8 @@ fun name(symbol: Int) =
         EVENTS -> "events"
         FST -> "first"
         SND -> "second"
+        LAKE -> "lake"
+        CIRCLE -> "circle"
         else -> throw Error("Invalid symbol")
     }
 
@@ -984,7 +1014,7 @@ class Parser(private val scanner: Scanner) {
 }
 
 fun main(args: Array<String>) {
-    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\marij\\Desktop\\Praktikum\\Git_Prevajanje\\PrevajanjePJ\\src\\test.txt").inputStream())).parse()) {
+    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
         println("accept")
     } else {
         println("reject")
