@@ -2,12 +2,13 @@ city "Maribor City 123" {
     string A = "This is a string"
     string B = "This is the second"
     int C = 12 + 2
-    coordinate D = (1+5,3-1)
+    int D = C
+    coordinate D = (1+3-2,3 - 3)
     if (C == 12) {
         string L = "cece"
     }
 
-    if (C == 12) {
+    if (C < 12) {
         string A = "cece"
     } else {
         string A = "ne"
@@ -15,14 +16,14 @@ city "Maribor City 123" {
 
     street "Smetanova ulica" {
         int C = 12 + C - 1 + 2
-        bend((1,2),(3,4), C)
+        bend((1,2),(fst(D),4), C)
         line((1,2),(1,4))
     }
 
     institution "SNG" {
         address = A
         events = 11 + 1
-        block(D,(3,4),(5,snd(D)),(7,8))
+        block((1,2),(3,4),(5,1),(7,8))
     }
 
     square "Glavni"{
