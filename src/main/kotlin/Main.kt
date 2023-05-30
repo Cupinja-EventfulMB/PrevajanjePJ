@@ -45,6 +45,7 @@ const val ELSE = 33
 const val EQUALS = 34
 const val SMALLER = 35
 const val BIGGER = 36
+const val NOTEQUAL = 37
 const val CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const val STRING_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789.,"
 const val NUMBER_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -60,10 +61,10 @@ interface DFA {
 }
 
 object ForForeachFFFAutomaton: DFA {
-    override val states = (1 .. 110).toSet()
+    override val states = (1 .. 112).toSet()
     override val alphabet = 0 .. 255
     override val startState = 1
-    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 97, 101, 102, 105, 106, 107, 108, 109, 110)
+    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 97, 101, 102, 105, 106, 107, 108, 110, 111, 112)
 
     private val numberOfStates = states.max() + 1 // plus the ERROR_STATE
     private val numberOfCodes = alphabet.max() + 1 // plus the EOF
@@ -472,16 +473,21 @@ object ForForeachFFFAutomaton: DFA {
         setTransition(1, '>', 108)
         setSymbol(108, BIGGER)
 
+        // !=
+        setTransition(1, '!', 109)
+        setTransition(109, '=', 110)
+        setSymbol(110, NOTEQUAL)
+
         // ignore [\n\r\t ]+
-        setTransition(1,'\n',109)
-        setTransition(1,'\r',109)
-        setTransition(1,'\t',109)
-        setTransition(1,' ',109)
-        setSymbol(109,SKIP_SYMBOL)
+        setTransition(1,'\n',111)
+        setTransition(1,'\r',111)
+        setTransition(1,'\t',111)
+        setTransition(1,' ',111)
+        setSymbol(111,SKIP_SYMBOL)
 
         // EOF
-        setTransition(1,-1,110)
-        setSymbol(110,EOF_SYMBOL)
+        setTransition(1,-1,112)
+        setSymbol(112,EOF_SYMBOL)
 
     }
 }
@@ -572,6 +578,7 @@ fun name(symbol: Int) =
         EQUALS -> "equals"
         SMALLER -> "smaller"
         BIGGER -> "bigger"
+        NOTEQUAL -> "notequal"
         else -> throw Error("Invalid symbol")
     }
 
@@ -1229,14 +1236,14 @@ class Parser(private val scanner: Scanner) {
 }
 
 fun main(args: Array<String>) {
-    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
+    /* if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
         println("accept")
     } else {
         println("reject")
-    }
+    } */
 
-    /*val inputString = "string A = \"This is a string\" circle lake = ==" // Update the input string here
+    val inputString = "string A = \"This is a string\" circle lake = == !=" // Update the input string here
     val inputStream: InputStream = inputString.byteInputStream()
     val scanner = Scanner(ForForeachFFFAutomaton, inputStream)
-    printTokens(scanner) */
+    printTokens(scanner)
 }
