@@ -1,8 +1,5 @@
 package task
 import java.io.InputStream
-import java.io.File
-import java.lang.management.BufferPoolMXBean
-import kotlin.math.exp
 
 const val ERROR_STATE = 0
 
@@ -46,6 +43,8 @@ const val EQUALS = 34
 const val SMALLER = 35
 const val BIGGER = 36
 const val NOTEQUAL = 37
+const val DOUBLE = 38
+const val DEC_DOUBLE = 39
 const val CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const val STRING_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789.,"
 const val NUMBER_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -61,10 +60,10 @@ interface DFA {
 }
 
 object ForForeachFFFAutomaton: DFA {
-    override val states = (1 .. 112).toSet()
+    override val states = (1 .. 120).toSet()
     override val alphabet = 0 .. 255
     override val startState = 1
-    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 97, 101, 102, 105, 106, 107, 108, 110, 111, 112)
+    override val finalStates = setOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 23, 28, 39, 44, 48, 54, 57, 61, 63, 64, 71, 74, 75, 84, 89, 92, 94, 97, 101, 102, 105, 106, 107, 108, 110, 112, 118, 119, 120)
 
     private val numberOfStates = states.max() + 1 // plus the ERROR_STATE
     private val numberOfCodes = alphabet.max() + 1 // plus the EOF
@@ -478,16 +477,42 @@ object ForForeachFFFAutomaton: DFA {
         setTransition(109, '=', 110)
         setSymbol(110, NOTEQUAL)
 
+        // Double (int.int)
+        setTransition(2, '.', 111)
+        for (a in '0' .. '9'){
+            setTransition(111,a,112)
+            setTransition(112,a,112)
+        }
+        setSymbol(112, DOUBLE)
+
+        // Double
+        setTransition(1, 'd', 113)
+        setTransition(113, 'o', 114)
+        setTransition(114, 'u', 115)
+        setTransition(115, 'b', 116)
+        setTransition(116, 'l', 117)
+        setTransition(117, 'e', 118)
+
+        for(character in CHARS){
+            if (character != 'o') setTransition(113, character, 3)
+            if (character != 'u') setTransition(114, character, 3)
+            if (character != 'b') setTransition(115, character, 3)
+            if (character != 'l') setTransition(116, character, 3)
+            if (character != 'e') setTransition(117, character, 3)
+            if (character != ' ') setTransition(118, character, 3)
+        }
+        setSymbol(118, DEC_DOUBLE)
+
         // ignore [\n\r\t ]+
-        setTransition(1,'\n',111)
-        setTransition(1,'\r',111)
-        setTransition(1,'\t',111)
-        setTransition(1,' ',111)
-        setSymbol(111,SKIP_SYMBOL)
+        setTransition(1,'\n',119)
+        setTransition(1,'\r',119)
+        setTransition(1,'\t',119)
+        setTransition(1,' ',119)
+        setSymbol(119,SKIP_SYMBOL)
 
         // EOF
-        setTransition(1,-1,112)
-        setSymbol(112,EOF_SYMBOL)
+        setTransition(1,-1,120)
+        setSymbol(120,EOF_SYMBOL)
 
     }
 }
@@ -579,6 +604,8 @@ fun name(symbol: Int) =
         SMALLER -> "smaller"
         BIGGER -> "bigger"
         NOTEQUAL -> "notequal"
+        DOUBLE -> "double"
+        DEC_DOUBLE -> "doubleVar"
         else -> throw Error("Invalid symbol")
     }
 
@@ -590,16 +617,18 @@ fun printTokens(scanner: Scanner) {
     }
 }
 
-data class Coordinate(val name: String, var longtitude: Int, var latitude: Int)
+data class Coordinate(val name: String, var longtitude: Double, var latitude: Double)
 
 class Parser(private val scanner: Scanner) {
     private var last: Token? = null
 
     private val variableStringMap = mutableMapOf<String, String>()
+    private val variableDoubleMap = mutableMapOf<String, Double>()
     private val variableIntMap = mutableMapOf<String, Int>()
     private var variableCoordPair: MutableList<Coordinate> = mutableListOf()
 
     private val insideVariableStringMap = mutableMapOf<String, String>()
+    private val insideVariableDoubleMap = mutableMapOf<String, Double>()
     private val insideVariableIntMap = mutableMapOf<String, Int>()
     private var insideVariableCoordPair: MutableList<Coordinate> = mutableListOf()
 
@@ -613,7 +642,7 @@ class Parser(private val scanner: Scanner) {
         }
 
         println("\nElements in variableIntMap:")
-        for ((key, value) in variableIntMap) {
+        for ((key, value) in variableDoubleMap) {
             println("$key -> $value")
         }
 
@@ -635,41 +664,41 @@ class Parser(private val scanner: Scanner) {
 
     // Expression ::= Operations MandatoryElementsList AdditionalElementsList
     fun Expression(): Boolean {
-        return Operations() && MandatoryElementsList() && AdditionalElementsList()
+        return Operations(true) && MandatoryElementsList() && AdditionalElementsList()
     }
 
     // Operations ::= Operation Operations | e
 
-    fun Operations(): Boolean {
-        if (Operation() && Operations())
+    fun Operations(status: Boolean): Boolean {
+        if (Operation(status) && Operations(status))
             return true
         else return true
     }
 
     // Operation ::= AssignString | AssignInt | AssignCoord | IfElse
 
-    fun Operation(): Boolean {
+    fun Operation(status: Boolean): Boolean {
         if(last?.symbol == DEC_STRING) {
-            return AssignString()
+            return AssignString(status)
         } else if(last?.symbol == DEC_INT) {
-            return AssignInt()
+            return AssignDouble(status)
         } else if(last?.symbol == DEC_COORD) {
-            return AssignCoord()
+            return AssignCoord(status)
         } else if(last?.symbol == IF) {
-            return IfElse()
+            return IfElse(status)
         } else
             return false
     }
 
-    // IntExpr = int IntExpr' | var IntExpr'
-    // IntExpr' = + IntExpr | - IntExpr | e
+    // DoubleExpr = int DoubleExpr' | var DoubleExpr' | double DoubleExpr'
+    // DoubleExpr' = + DoubleExpr | - DoubleExpr | e
 
-    fun IntExpr(): Pair<Boolean, Int?> {
+    fun DoubleExpr(): Pair<Boolean, Double?> {
         if (last?.symbol == INT) {
-            val intValue = last?.lexeme?.toInt()
+            val intValue = last?.lexeme?.toDouble()
             recognizeTerminal(INT)
             if (intValue != null) {
-                return IntExprPrime(intValue)
+                return DoubleExprPrime(intValue)
             }
         } else if (last?.symbol == VAR) {
             val stringValue = last?.lexeme
@@ -679,23 +708,23 @@ class Parser(private val scanner: Scanner) {
                 foundValue = variableIntMap[stringValue]
             }
             if (foundValue != null) {
-                return IntExprPrime(foundValue)
+                return DoubleExprPrime(foundValue.toDouble())
             }
         }
         return Pair(false, null)
     }
 
-    fun IntExprPrime(inValue: Int): Pair<Boolean, Int?> {
+    fun DoubleExprPrime(inValue: Double): Pair<Boolean, Double?> {
         if (last?.symbol == PLUS) {
             recognizeTerminal(PLUS)
-            val result = IntExpr()
+            val result = DoubleExpr()
             if (result.first) {
                 val computedValue = inValue + result.second!!
                 return Pair(true, computedValue)
             }
         } else if (last?.symbol == MINUS) {
             recognizeTerminal(MINUS)
-            val result = IntExpr()
+            val result = DoubleExpr()
             if (result.first) {
                 val computedValue = inValue - result.second!!
                 return Pair(true, computedValue)
@@ -706,10 +735,12 @@ class Parser(private val scanner: Scanner) {
 
     //InsideOperations ::= InsideOperation InsideOperations
 
-    fun InsideOperations(): Boolean {
-        if (InsideOperation() && InsideOperations())
-            return true
-        else return true
+    fun InsideOperations(status: Boolean): Boolean {
+        if (status) {
+            if (InsideOperation() && InsideOperations(true))
+                return true
+            else return true
+        } else return false
     }
 
     // InsideOperation ::= InsideAssignString | InsideAssignInt | InsideAssignCoord
@@ -766,16 +797,107 @@ class Parser(private val scanner: Scanner) {
             return Lakes()
         } else return false
     }
-    // IfElse ::=  if ( IntExpr Compare IntExpr ) Operations { Operations } IfElse'
+    // IfElse ::=  if ( IntExpr Compare IntExpr ) { Operations } IfElse'
     // Compare ::= == | != | < | >
     // IfElse' ::= else { Operations } | e
-    fun IfElse(): Boolean {
-        if (recognizeTerminal(IF) && recognizeTerminal(LPAREN) && IntExpr().first && Compare() && IntExpr().first && recognizeTerminal(
-                RPAREN) && recognizeTerminal(LCPAREN) && Operations() && recognizeTerminal(RCPAREN)) {
-            if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations() && recognizeTerminal(RCPAREN)) {
-                return true
+    fun IfElse(status: Boolean): Boolean {
+        if (recognizeTerminal(IF) && recognizeTerminal(LPAREN)) {
+            var firstVal = DoubleExpr()
+            if (firstVal.first) {
+                if (recognizeTerminal(EQUALS)) {
+                    var secondValue = DoubleExpr()
+                    if (secondValue.first) {
+                        if (recognizeTerminal(RPAREN) && firstVal.second != null && secondValue.second != null && recognizeTerminal(LCPAREN)) {
+                            if (firstVal.second == secondValue.second) {
+                                if (Operations(true) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations(false) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            } else if (firstVal.second != secondValue.second) {
+                                if (Operations(false) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations(true) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                } else if (recognizeTerminal(NOTEQUAL)) {
+                    var secondValue = DoubleExpr()
+                    if (secondValue.first) {
+                        if (recognizeTerminal(RPAREN) && firstVal.second != null && secondValue.second != null && recognizeTerminal(LCPAREN)) {
+                            if (firstVal.second != secondValue.second) {
+                                if (Operations(true) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations(false) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            } else if (firstVal.second == secondValue.second) {
+                                if (Operations(false) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations(true) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                } else if (recognizeTerminal(SMALLER)) {
+                    var secondValue = DoubleExpr()
+                    if (secondValue.first) {
+                        if (recognizeTerminal(RPAREN) && firstVal.second != null && secondValue.second != null && recognizeTerminal(LCPAREN)) {
+                            if (firstVal.second!! < secondValue.second!!) {
+                                if (Operations(true) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations(false) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            } else {
+                                if (Operations(false) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations(true) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                } else if (recognizeTerminal(BIGGER)) {
+                    var secondValue = DoubleExpr()
+                    if (secondValue.first) {
+                        if (recognizeTerminal(RPAREN) && firstVal.second != null && secondValue.second != null && recognizeTerminal(LCPAREN)) {
+                            if (firstVal.second!! > secondValue.second!!) {
+                                if (Operations(true) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations(false) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            } else {
+                                if (Operations(false) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && Operations(true) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            return true
         }
         return false
     }
@@ -783,7 +905,8 @@ class Parser(private val scanner: Scanner) {
     fun Compare(): Boolean {
         if (recognizeTerminal(EQUALS)) return true
         else if (recognizeTerminal(BIGGER)) return true
-        else return recognizeTerminal(SMALLER)
+        else if (recognizeTerminal(SMALLER)) return true
+        else return (recognizeTerminal(NOTEQUAL))
     }
 
     // Streets ::= Street StreetPrime
@@ -794,9 +917,9 @@ class Parser(private val scanner: Scanner) {
 
     // Street ::= street string { InsideOperations Bend InsideOperations Line }
     fun Street(): Boolean {
-        if (recognizeTerminal(STREET) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations() && Bend() && Line() && recognizeTerminal(RCPAREN)) {
+        if (recognizeTerminal(STREET) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Bend() && Line() && recognizeTerminal(RCPAREN)) {
             insideVariableStringMap.clear()
-            insideVariableIntMap.clear()
+            insideVariableDoubleMap.clear()
             insideVariableCoordPair.clear()
             return true
         } else return false
@@ -819,9 +942,9 @@ class Parser(private val scanner: Scanner) {
     // Institution ::= institution string { InsideOperations Address InsideOperations Events InsideOperations Block }
 
     fun Institution(): Boolean {
-        if (recognizeTerminal(INSTITUTION) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations() && Address() && Events() && Block() && recognizeTerminal(RCPAREN)) {
+        if (recognizeTerminal(INSTITUTION) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Address() && Events() && Block() && recognizeTerminal(RCPAREN)) {
             insideVariableStringMap.clear()
-            insideVariableIntMap.clear()
+            insideVariableDoubleMap.clear()
             insideVariableCoordPair.clear()
             return true
         } else return false
@@ -845,9 +968,9 @@ class Parser(private val scanner: Scanner) {
 
     // Square ::= square string { InsideOperations Block }
     fun Square(): Boolean {
-        if (recognizeTerminal(SQUARE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations() && Block() && recognizeTerminal(RCPAREN)) {
+        if (recognizeTerminal(SQUARE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Block() && recognizeTerminal(RCPAREN)) {
             insideVariableStringMap.clear()
-            insideVariableIntMap.clear()
+            insideVariableDoubleMap.clear()
             insideVariableCoordPair.clear()
             return true
         } else return false
@@ -862,9 +985,9 @@ class Parser(private val scanner: Scanner) {
 
     // Statue ::= statue string { InsideOperations Point }
     fun Statue(): Boolean {
-        if (recognizeTerminal(STATUE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations() && Point() && recognizeTerminal(RCPAREN)) {
+        if (recognizeTerminal(STATUE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Point() && recognizeTerminal(RCPAREN)) {
             insideVariableStringMap.clear()
-            insideVariableIntMap.clear()
+            insideVariableDoubleMap.clear()
             insideVariableCoordPair.clear()
             return true
         } else return false
@@ -879,9 +1002,9 @@ class Parser(private val scanner: Scanner) {
 
     // Lake ::= lake string { InsideOperations Circle }
     fun Lake(): Boolean {
-        if (recognizeTerminal(LAKE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations() && Circle() && recognizeTerminal(RCPAREN)) {
+        if (recognizeTerminal(LAKE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Circle() && recognizeTerminal(RCPAREN)) {
             insideVariableStringMap.clear()
-            insideVariableIntMap.clear()
+            insideVariableDoubleMap.clear()
             insideVariableCoordPair.clear()
             return true
         } else return false
@@ -923,7 +1046,7 @@ class Parser(private val scanner: Scanner) {
     // Circle ::= circle ( Coordinate, IntExpr )
     fun Circle(): Boolean {
         if (recognizeTerminal(CIRCLE)) {
-            return recognizeTerminal(LPAREN) && Coordinate().first && recognizeTerminal(COMMA) && IntExpr().first && recognizeTerminal(RPAREN)
+            return recognizeTerminal(LPAREN) && Coordinate().first && recognizeTerminal(COMMA) && DoubleExpr().first && recognizeTerminal(RPAREN)
         }
         return false
     }
@@ -932,15 +1055,15 @@ class Parser(private val scanner: Scanner) {
     // Coordinate' ::= IntExpr , Coordinate'' )
     // Coordinate'' ::= IntExpr | First | Second
 
-    fun Coordinate(): Triple<Boolean, Int?, Int?> {
+    fun Coordinate(): Triple<Boolean, Double?, Double?> {
         if (recognizeTerminal(LPAREN)) {
-            var expr = IntExpr()
+            var expr = DoubleExpr()
             var f = First()
             var s = Second()
             if (expr.first) {
                 var firstCoord = expr.second
                 if(recognizeTerminal(COMMA)) {
-                    var secExpr = IntExpr()
+                    var secExpr = DoubleExpr()
                     var first = First()
                     var second = Second()
                     if (firstCoord != null) {
@@ -961,7 +1084,7 @@ class Parser(private val scanner: Scanner) {
                 }
             } else if (f != null) {
                 if (recognizeTerminal(COMMA)) {
-                    var expression = IntExpr()
+                    var expression = DoubleExpr()
                     var fst = First()
                     var snd = Second()
                     if (expression.first) {
@@ -980,7 +1103,7 @@ class Parser(private val scanner: Scanner) {
                 }
             } else if (s != null) {
                 if (recognizeTerminal(COMMA)) {
-                    var expression = IntExpr()
+                    var expression = DoubleExpr()
                     var fst = First()
                     var snd = Second()
                     if (expression.first) {
@@ -1015,13 +1138,14 @@ class Parser(private val scanner: Scanner) {
 
     // AssignString ::= dec_string var = AssignString'
     // AssignString' ::= string | var
-    fun AssignString(): Boolean {
+    fun AssignString(status: Boolean): Boolean {
         if (recognizeTerminal(DEC_STRING) && last?.symbol == VAR) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
             if (recognizeTerminal(ASSIGN) && (last?.symbol == STRING || last?.symbol == VAR)) {
                 val stringValue = last?.lexeme
                 recognizeTerminal(STRING)
+                if (!status) return true
                 val cleanedStringValue = stringValue?.removeSurrounding("\"")
 
                 if (variableName != null && cleanedStringValue != null) {
@@ -1034,16 +1158,17 @@ class Parser(private val scanner: Scanner) {
     }
 
     //AssignInt ::= dec_int var = AssignInt'
-    //AssignInt' ::= int | var
+    //AssignInt' ::= int | var |
 
-    fun AssignInt(): Boolean {
+    fun AssignDouble(status: Boolean): Boolean {
         if (recognizeTerminal(DEC_INT) && last?.symbol == VAR) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
             if (recognizeTerminal(ASSIGN) && (last?.symbol == INT || last?.symbol == VAR)) {
-                val intValue =  IntExpr().second
+                val intValue =  DoubleExpr().second
+                if (!status) return true
                 if (variableName != null && intValue != null) {
-                    variableIntMap[variableName] = intValue
+                    variableDoubleMap[variableName] = intValue
                     return true
                 }
             }
@@ -1054,17 +1179,18 @@ class Parser(private val scanner: Scanner) {
     // AssignCoord ::= dec_coord var = AssignCoord'
     // AssignCoord' ::= Coordinate | var
 
-    fun AssignCoord(): Boolean {
+    fun AssignCoord(status: Boolean): Boolean {
         if (recognizeTerminal(DEC_COORD) && last?.symbol == VAR) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
             if (recognizeTerminal(ASSIGN) && recognizeTerminal(LPAREN) && (last?.symbol == INT || last?.symbol == VAR)) {
-                val leftIntValue =  IntExpr().second
+                val leftIntValue =  DoubleExpr().second
                 if(recognizeTerminal(COMMA)) {
-                    val rightIntValue =  IntExpr().second
+                    val rightIntValue =  DoubleExpr().second
                     if (variableName != null && leftIntValue != null && rightIntValue != null) {
                         val newCoord = Coordinate(variableName, leftIntValue, rightIntValue)
                         if (recognizeTerminal(RPAREN)) {
+                            if (!status) return true
                             variableCoordPair.add(newCoord)
                             return true
                         }
@@ -1104,9 +1230,9 @@ class Parser(private val scanner: Scanner) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
             if (recognizeTerminal(ASSIGN) && (last?.symbol == INT || last?.symbol == VAR)) {
-                val intValue = IntExpr().second
+                val intValue = DoubleExpr().second
                 if (variableName != null && intValue != null) {
-                    insideVariableIntMap[variableName] = intValue
+                    insideVariableIntMap[variableName] = intValue.toInt()
                     return true
                 }
             }
@@ -1121,9 +1247,9 @@ class Parser(private val scanner: Scanner) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
             if (recognizeTerminal(ASSIGN) && recognizeTerminal(LPAREN) && (last?.symbol == INT || last?.symbol == VAR)) {
-                val leftIntValue =  IntExpr().second
+                val leftIntValue =  DoubleExpr().second
                 if(recognizeTerminal(COMMA)) {
-                    val rightIntValue =  IntExpr().second
+                    val rightIntValue =  DoubleExpr().second
                     if (variableName != null && leftIntValue != null && rightIntValue != null) {
                         val newCoord = Coordinate(variableName, leftIntValue, rightIntValue)
                         if (recognizeTerminal(RPAREN)) {
@@ -1137,15 +1263,15 @@ class Parser(private val scanner: Scanner) {
         return false
     }
 
-    // Angle ::= IntExpr | var
+    // Angle ::= DoubleExpr | var
 
     private fun Angle(): Boolean {
-        if (IntExpr().first) {
+        if (DoubleExpr().first) {
             return true
         } else if (last?.symbol == VAR) {
             val stringValue = last?.lexeme
             recognizeTerminal(VAR)
-            return variableIntMap.keys.find { it == stringValue } != null
+            return variableDoubleMap.keys.find { it == stringValue } != null
         } else return false
     }
 
@@ -1172,14 +1298,14 @@ class Parser(private val scanner: Scanner) {
     // Events' ::= IntExpr | var
     private fun Events(): Boolean {
         if (recognizeTerminal(EVENTS) && recognizeTerminal(ASSIGN)) {
-            if (IntExpr().first) {
+            if (DoubleExpr().first) {
                 return true
             } else if (last?.symbol == VAR) {
                 val stringValue = last?.lexeme
                 recognizeTerminal(VAR)
-                var foundValue = insideVariableIntMap.keys.find { it == stringValue }
+                var foundValue = insideVariableDoubleMap.keys.find { it == stringValue }
                 if (foundValue == null) {
-                    foundValue = variableIntMap.keys.find { it == stringValue }
+                    foundValue = variableDoubleMap.keys.find { it == stringValue }
                 }
                 return foundValue != null
             } else return false
@@ -1188,7 +1314,7 @@ class Parser(private val scanner: Scanner) {
 
     // First ::= fst(var)
 
-    private fun First(): Int? {
+    private fun First(): Double? {
         if(recognizeTerminal(FST) && recognizeTerminal(LPAREN)) {
             if (last?.symbol == VAR) {
                 val stringValue = last?.lexeme
@@ -1208,7 +1334,7 @@ class Parser(private val scanner: Scanner) {
     }
 
     // Second ::= snd(var)
-    private fun Second(): Int? {
+    private fun Second(): Double? {
         if(recognizeTerminal(SND) && recognizeTerminal(LPAREN)) {
             if (last?.symbol == VAR) {
                 val stringValue = last?.lexeme
@@ -1236,13 +1362,13 @@ class Parser(private val scanner: Scanner) {
 }
 
 fun main(args: Array<String>) {
-    /* if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
+    /*if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
         println("accept")
     } else {
         println("reject")
     } */
 
-    val inputString = "string A = \"This is a string\" circle lake = == !=" // Update the input string here
+    val inputString = "string A = \"This is a string\" circle lake = == != double 32.4444" // Update the input string here
     val inputStream: InputStream = inputString.byteInputStream()
     val scanner = Scanner(ForForeachFFFAutomaton, inputStream)
     printTokens(scanner)

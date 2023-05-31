@@ -4,14 +4,17 @@ city "Maribor City 123" {
     int C = 12 + 2
     int D = C
     coordinate D = (1+3-2,3 - 3)
-    if (C == 12) {
+    if (C == 14) {
         string L = "cece"
     }
 
-    if (C < 12) {
+    if (C < 14) {
         string A = "cece"
     } else {
         string A = "ne"
+        if (D == 14) {
+            string P = "if in if"
+        }
     }
 
     street "Smetanova ulica" {
