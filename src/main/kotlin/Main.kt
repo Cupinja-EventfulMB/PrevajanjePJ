@@ -1,5 +1,6 @@
 package task
 import java.io.InputStream
+import java.io.File
 
 const val ERROR_STATE = 0
 
@@ -642,6 +643,11 @@ class Parser(private val scanner: Scanner) {
         }
 
         println("\nElements in variableIntMap:")
+        for ((key, value) in variableIntMap) {
+            println("$key -> $value")
+        }
+
+        println("\nElements in variableDoubleMap:")
         for ((key, value) in variableDoubleMap) {
             println("$key -> $value")
         }
@@ -675,19 +681,21 @@ class Parser(private val scanner: Scanner) {
         else return true
     }
 
-    // Operation ::= AssignString | AssignInt | AssignCoord | IfElse
+    // Operation ::= AssignString | AssignInt | AssignCoord | AssignDouble | IfElse
 
     fun Operation(status: Boolean): Boolean {
         if(last?.symbol == DEC_STRING) {
             return AssignString(status)
         } else if(last?.symbol == DEC_INT) {
-            return AssignDouble(status)
+            return AssignInt(status)
         } else if(last?.symbol == DEC_COORD) {
             return AssignCoord(status)
         } else if(last?.symbol == IF) {
             return IfElse(status)
-        } else
-            return false
+        } else if(last?.symbol == DEC_DOUBLE) {
+            return AssignDouble(status)
+        }
+        return false
     }
 
     // DoubleExpr = int DoubleExpr' | var DoubleExpr' | double DoubleExpr'
@@ -703,12 +711,25 @@ class Parser(private val scanner: Scanner) {
         } else if (last?.symbol == VAR) {
             val stringValue = last?.lexeme
             recognizeTerminal(VAR)
+            var doubleFoundValue = insideVariableDoubleMap[stringValue]
+            if (doubleFoundValue == null) {
+                doubleFoundValue = variableDoubleMap[stringValue]
+            }
+            if (doubleFoundValue != null) {
+                return DoubleExprPrime(doubleFoundValue)
+            }
             var foundValue = insideVariableIntMap[stringValue]
             if (foundValue == null) {
                 foundValue = variableIntMap[stringValue]
             }
             if (foundValue != null) {
                 return DoubleExprPrime(foundValue.toDouble())
+            }
+        } else if (last?.symbol == DOUBLE) {
+            val doubleValue = last?.lexeme?.toDouble()
+            recognizeTerminal(DOUBLE)
+            if (doubleValue != null) {
+                return DoubleExprPrime(doubleValue)
             }
         }
         return Pair(false, null)
@@ -736,22 +757,24 @@ class Parser(private val scanner: Scanner) {
     //InsideOperations ::= InsideOperation InsideOperations
 
     fun InsideOperations(status: Boolean): Boolean {
-        if (status) {
-            if (InsideOperation() && InsideOperations(true))
-                return true
-            else return true
-        } else return false
+        if (InsideOperation(status) && InsideOperations(status))
+            return true
+        else return true
     }
 
     // InsideOperation ::= InsideAssignString | InsideAssignInt | InsideAssignCoord
 
-    fun InsideOperation(): Boolean {
+    fun InsideOperation(status: Boolean): Boolean {
         if(last?.symbol == DEC_STRING) {
-            return InsideAssignString()
+            return InsideAssignString(status)
         } else if(last?.symbol == DEC_INT) {
-            return InsideAssignInt()
+            return InsideAssignInt(status)
         } else if(last?.symbol == DEC_COORD) {
-            return InsideAssignCoord()
+            return InsideAssignCoord(status)
+        } else if(last?.symbol == IF) {
+            return InsideIfElse(status)
+        } else if(last?.symbol == DEC_DOUBLE) {
+            return InsideAssignDouble(status)
         }
         return false
     }
@@ -1160,7 +1183,7 @@ class Parser(private val scanner: Scanner) {
     //AssignInt ::= dec_int var = AssignInt'
     //AssignInt' ::= int | var |
 
-    fun AssignDouble(status: Boolean): Boolean {
+    fun AssignInt(status: Boolean): Boolean {
         if (recognizeTerminal(DEC_INT) && last?.symbol == VAR) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
@@ -1168,7 +1191,7 @@ class Parser(private val scanner: Scanner) {
                 val intValue =  DoubleExpr().second
                 if (!status) return true
                 if (variableName != null && intValue != null) {
-                    variableDoubleMap[variableName] = intValue
+                    variableIntMap[variableName] = intValue.toInt()
                     return true
                 }
             }
@@ -1201,16 +1224,36 @@ class Parser(private val scanner: Scanner) {
         return false
     }
 
+    //AssignDouble ::= dec_double var = AssignDouble'
+    //AssignDouble' ::= double | var
+
+    fun AssignDouble(status: Boolean): Boolean {
+        if (recognizeTerminal(DEC_DOUBLE) && last?.symbol == VAR) {
+            val variableName = last?.lexeme
+            recognizeTerminal(VAR)
+            if (recognizeTerminal(ASSIGN) && (last?.symbol == DOUBLE || last?.symbol == VAR)) {
+                val intValue =  DoubleExpr().second
+                if (!status) return true
+                if (variableName != null && intValue != null) {
+                    variableDoubleMap[variableName] = intValue
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     // InsideAssignString ::= dec_string var = InsideAssignString'
     // InsideAssignString' ::= string | var
 
-    fun InsideAssignString(): Boolean {
+    fun InsideAssignString(status: Boolean): Boolean {
         if (recognizeTerminal(DEC_STRING) && last?.symbol == VAR) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
             if (recognizeTerminal(ASSIGN) && (last?.symbol == STRING || last?.symbol == VAR)) {
                 val stringValue = last?.lexeme
                 recognizeTerminal(STRING)
+                if (!status) return true
                 val cleanedStringValue = stringValue?.removeSurrounding("\"")
 
                 if (variableName != null && cleanedStringValue != null) {
@@ -1225,12 +1268,13 @@ class Parser(private val scanner: Scanner) {
     // InsideAssignInt ::= dec_int var = InsideAssignInt'
     // InsideAssignInt' ::= int | var
 
-    fun InsideAssignInt(): Boolean {
+    fun InsideAssignInt(status: Boolean): Boolean {
         if (recognizeTerminal(DEC_INT) && last?.symbol == VAR) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
             if (recognizeTerminal(ASSIGN) && (last?.symbol == INT || last?.symbol == VAR)) {
-                val intValue = DoubleExpr().second
+                val intValue =  DoubleExpr().second
+                if (!status) return true
                 if (variableName != null && intValue != null) {
                     insideVariableIntMap[variableName] = intValue.toInt()
                     return true
@@ -1242,7 +1286,7 @@ class Parser(private val scanner: Scanner) {
     // InsideAssignCoord ::= dec_coord var = InsideAssignCoord'
     // InsideAssignCoord' ::= Coordinate | var
 
-    fun InsideAssignCoord(): Boolean {
+    fun InsideAssignCoord(status: Boolean): Boolean {
         if (recognizeTerminal(DEC_COORD) && last?.symbol == VAR) {
             val variableName = last?.lexeme
             recognizeTerminal(VAR)
@@ -1253,8 +1297,127 @@ class Parser(private val scanner: Scanner) {
                     if (variableName != null && leftIntValue != null && rightIntValue != null) {
                         val newCoord = Coordinate(variableName, leftIntValue, rightIntValue)
                         if (recognizeTerminal(RPAREN)) {
+                            if (!status) return true
                             insideVariableCoordPair.add(newCoord)
                             return true
+                        }
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    fun InsideAssignDouble(status: Boolean): Boolean {
+        if (recognizeTerminal(DEC_DOUBLE) && last?.symbol == VAR) {
+            val variableName = last?.lexeme
+            recognizeTerminal(VAR)
+            if (recognizeTerminal(ASSIGN) && (last?.symbol == DOUBLE || last?.symbol == VAR)) {
+                val intValue =  DoubleExpr().second
+                if (!status) return true
+                if (variableName != null && intValue != null) {
+                    insideVariableDoubleMap[variableName] = intValue
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    fun InsideIfElse(status: Boolean): Boolean {
+        if (recognizeTerminal(IF) && recognizeTerminal(LPAREN)) {
+            var firstVal = DoubleExpr()
+            if (firstVal.first) {
+                if (recognizeTerminal(EQUALS)) {
+                    var secondValue = DoubleExpr()
+                    if (secondValue.first) {
+                        if (recognizeTerminal(RPAREN) && firstVal.second != null && secondValue.second != null && recognizeTerminal(LCPAREN)) {
+                            if (firstVal.second == secondValue.second) {
+                                if (InsideOperations(true) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && InsideOperations(false) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            } else if (firstVal.second != secondValue.second) {
+                                if (InsideOperations(false) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && InsideOperations(true) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                } else if (recognizeTerminal(NOTEQUAL)) {
+                    var secondValue = DoubleExpr()
+                    if (secondValue.first) {
+                        if (recognizeTerminal(RPAREN) && firstVal.second != null && secondValue.second != null && recognizeTerminal(LCPAREN)) {
+                            if (firstVal.second != secondValue.second) {
+                                if (InsideOperations(true) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && InsideOperations(false) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            } else if (firstVal.second == secondValue.second) {
+                                if (InsideOperations(false) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && InsideOperations(true) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                } else if (recognizeTerminal(SMALLER)) {
+                    var secondValue = DoubleExpr()
+                    if (secondValue.first) {
+                        if (recognizeTerminal(RPAREN) && firstVal.second != null && secondValue.second != null && recognizeTerminal(LCPAREN)) {
+                            if (firstVal.second!! < secondValue.second!!) {
+                                if (InsideOperations(true) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && InsideOperations(false) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            } else {
+                                if (InsideOperations(false) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && InsideOperations(true) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                } else if (recognizeTerminal(BIGGER)) {
+                    var secondValue = DoubleExpr()
+                    if (secondValue.first) {
+                        if (recognizeTerminal(RPAREN) && firstVal.second != null && secondValue.second != null && recognizeTerminal(LCPAREN)) {
+                            if (firstVal.second!! > secondValue.second!!) {
+                                if (InsideOperations(true) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && InsideOperations(false) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            } else {
+                                if (InsideOperations(false) && recognizeTerminal(RCPAREN)) {
+                                    if (!status) return true
+                                    if (recognizeTerminal(ELSE) && recognizeTerminal(LCPAREN) && InsideOperations(true) && recognizeTerminal(
+                                            RCPAREN))
+                                        return true
+                                    return true
+                                }
+                            }
                         }
                     }
                 }
@@ -1362,14 +1525,14 @@ class Parser(private val scanner: Scanner) {
 }
 
 fun main(args: Array<String>) {
-    /*if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
+    if (Parser(Scanner(ForForeachFFFAutomaton, File("C:\\Users\\cveta\\IdeaProjects\\PrevajanjePJ-ProjektnaNaloga\\src\\test.txt").inputStream())).parse()) {
         println("accept")
     } else {
         println("reject")
-    } */
+    }
 
-    val inputString = "string A = \"This is a string\" circle lake = == != double 32.4444" // Update the input string here
+    /*val inputString = "string A = \"This is a string\" circle lake = == != double 32.4444" // Update the input string here
     val inputStream: InputStream = inputString.byteInputStream()
     val scanner = Scanner(ForForeachFFFAutomaton, inputStream)
-    printTokens(scanner)
+    printTokens(scanner)  */
 }
