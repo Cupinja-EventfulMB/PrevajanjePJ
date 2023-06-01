@@ -1,0 +1,55 @@
+{
+	"type": "FeatureCollection",
+	"features": [
+	{
+  		"type": "Feature",
+  		"properties": {
+			"name": "SNG",
+			"address": "Ulica",
+			"events":12.0
+		},
+  		"geometry": {
+			"type": "Polygon",
+			"coordinates": [
+      		[
+        		[15.6435, 46.56015],
+        		[15.6443, 46.56015],
+        		[15.6443, 46.5595],
+        		[15.6435, 46.5595],
+        		[15.6435, 46.56015]
+      		]
+    	  ]
+  		}
+	  },
+
+	{
+  		"type": "Feature",
+  		"properties": {
+			"name": "Glavni"
+		},
+  		"geometry": {
+			"type": "Polygon",
+			"coordinates": [
+      		[
+        		[15.649512, 46.556204],
+        		[15.649669, 46.556359],
+        		[15.649823, 46.556293],
+        		[15.649977, 46.556448],
+        		[15.649512, 46.556204]
+      		]
+    	  ]
+  		}
+	  },
+
+	{
+  		"type": "Feature",
+  		"properties": {
+			"name": "Jezero"
+		},
+  		"geometry": {
+			"type": "Point",
+			"coordinates": [15.649512, 46.556204]
+  		}
+	  }
+	]
+}
