@@ -1,6 +1,9 @@
 package task
 import java.io.InputStream
 import java.io.File
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.PI
 
 const val ERROR_STATE = 0
 
@@ -662,7 +665,8 @@ class Parser(private val scanner: Scanner) {
         */
         var file = File(fileName)
         file.createNewFile()
-        geoJSON += "\t]\n}"
+        geoJSON = geoJSON.substring(0, geoJSON.length-2)
+        geoJSON += "\n\t]\n}"
         file.writeText(geoJSON)
         return when (last?.symbol) {
             EOF_SYMBOL -> status
@@ -947,12 +951,51 @@ class Parser(private val scanner: Scanner) {
 
     // Street ::= street string { InsideOperations Bend InsideOperations Line }
     fun Street(): Boolean {
-        if (recognizeTerminal(STREET) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Bend() && Line() && recognizeTerminal(RCPAREN)) {
-            insideVariableStringMap.clear()
-            insideVariableDoubleMap.clear()
-            insideVariableCoordPair.clear()
-            return true
-        } else return false
+        if (recognizeTerminal(STREET)) {
+            if (last?.symbol == STRING) {
+                var name = last?.lexeme
+                name = name!!.substring(1, name.length - 1)
+                recognizeTerminal(STRING)
+                if (recognizeTerminal(LCPAREN) && InsideOperations(true)) {
+                    val bend = Bend()
+                    if (bend.first) {
+                        var coords = bend.second
+                        val angle = bend.third
+                        var bendCoordinates = generateGeoJSONCurve(Pair(coords!![0], coords!![1]), angle!!)
+                        val line = Line()
+                        if (line.first) {
+                            val firstLine = line.second
+                            val secondLine = line.third
+                            if (recognizeTerminal(RCPAREN)) {
+                                geoJSON += "\n\t{\n" +
+                                        "  \t\t\"type\": \"Feature\",\n" +
+                                        "  \t\t\"properties\": {\n" +
+                                        "\t\t\t\"element\": \"" + "Street" + "\",\n" +
+                                        "\t\t\t\"name\": \"" + name + "\"\n" +
+                                        "\t\t},\n" +
+                                        "  \t\t\"geometry\": {\n" +
+                                        "\t\t\t\"type\": \"LineString\",\n" +
+                                        "\t\t\t\"coordinates\": [\n" +
+                                        "        \t\t[" + (bendCoordinates?.get(0)!!.latitude) + ", " + (bendCoordinates?.get(0)!!.longtitude) + "],\n" +
+                                        "        \t\t[" + (bendCoordinates?.get(1)!!.latitude) + ", " + (bendCoordinates?.get(1)!!.longtitude) + "],\n" +
+                                        "        \t\t[" + (bendCoordinates?.get(2)!!.latitude) + ", " + (bendCoordinates?.get(2)!!.longtitude) + "],\n" +
+                                        "        \t\t[" + (firstLine!!.latitude) + ", " + (firstLine!!.longtitude) + "],\n" +
+                                        "        \t\t[" + (secondLine!!.latitude) + ", " + (secondLine!!.longtitude) + "]\n" +
+                                        "    \t  ]\n" +
+                                        "  \t\t}\n" +
+                                        "\t  },\n"
+                                insideVariableStringMap.clear()
+                                insideVariableDoubleMap.clear()
+                                insideVariableCoordPair.clear()
+                                return true
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+        return false
     }
 
     // SteeetPrime ::= Streets | e
@@ -992,6 +1035,7 @@ class Parser(private val scanner: Scanner) {
                                     geoJSON += "\n\t{\n" +
                                             "  \t\t\"type\": \"Feature\",\n" +
                                             "  \t\t\"properties\": {\n" +
+                                            "\t\t\t\"element\": \"" + "Institution" + "\",\n" +
                                             "\t\t\t\"name\": \"" + name + "\",\n" +
                                             "\t\t\t\"address\": \"" + ad + "\",\n" +
                                             "\t\t\t\"events\":" + ev + "\n" +
@@ -1054,6 +1098,7 @@ class Parser(private val scanner: Scanner) {
                             geoJSON += "\n\t{\n" +
                                     "  \t\t\"type\": \"Feature\",\n" +
                                     "  \t\t\"properties\": {\n" +
+                                    "\t\t\t\"element\": \"" + "Square" + "\",\n" +
                                     "\t\t\t\"name\": \"" + name + "\"\n" +
                                     "\t\t},\n" +
                                     "  \t\t\"geometry\": {\n" +
@@ -1102,6 +1147,7 @@ class Parser(private val scanner: Scanner) {
                         geoJSON += "\n\t{\n" +
                                 "  \t\t\"type\": \"Feature\",\n" +
                                 "  \t\t\"properties\": {\n" +
+                                "\t\t\t\"element\": \"" + "Statue" + "\",\n" +
                                 "\t\t\t\"name\": \"" + name + "\"\n" +
                                 "\t\t},\n" +
                                 "  \t\t\"geometry\": {\n" +
@@ -1135,12 +1181,51 @@ class Parser(private val scanner: Scanner) {
 
     // Lake ::= lake string { InsideOperations Circle }
     fun Lake(): Boolean {
-        if (recognizeTerminal(LAKE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Circle() && recognizeTerminal(RCPAREN)) {
-            insideVariableStringMap.clear()
-            insideVariableDoubleMap.clear()
-            insideVariableCoordPair.clear()
-            return true
-        } else return false
+        if (recognizeTerminal(LAKE)) {
+            if (last?.symbol == STRING) {
+                var name = last?.lexeme
+                name = name!!.substring(1, name.length -1)
+                recognizeTerminal(STRING)
+                if (recognizeTerminal(LCPAREN) && InsideOperations(true)) {
+                    var circle = Circle()
+                    if (circle.first) {
+                        var coords = generateCirclePolygon(circle.second!!, circle.third!!, 20)
+                        if (recognizeTerminal(RCPAREN)) {
+                            geoJSON += "\n\t{\n" +
+                                    "  \t\t\"type\": \"Feature\",\n" +
+                                    "  \t\t\"properties\": {\n" +
+                                    "\t\t\t\"element\": \"" + "Lake" + "\",\n" +
+                                    "\t\t\t\"name\": \"" + name + "\"\n" +
+                                    "\t\t},\n" +
+                                    "  \t\t\"geometry\": {\n" +
+                                    "\t\t\t\"type\": \"Polygon\",\n" +
+                                    "\t\t\t\"coordinates\": [\n" +
+                                    "      \t\t[\n" +
+                                    "        \t\t[" + (coords?.get(0)!!.latitude) + ", " + (coords?.get(0)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(1)!!.latitude) + ", " + (coords?.get(1)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(2)!!.latitude) + ", " + (coords?.get(2)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(3)!!.latitude) + ", " + (coords?.get(3)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(4)!!.latitude) + ", " + (coords?.get(4)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(5)!!.latitude) + ", " + (coords?.get(5)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(6)!!.latitude) + ", " + (coords?.get(6)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(7)!!.latitude) + ", " + (coords?.get(7)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(8)!!.latitude) + ", " + (coords?.get(8)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(9)!!.latitude) + ", " + (coords?.get(9)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (coords?.get(0)!!.latitude) + ", " + (coords?.get(0)!!.longtitude) + "]\n" +
+                                    "      \t\t]\n" +
+                                    "    \t  ]\n" +
+                                    "  \t\t}\n" +
+                                    "\t  },\n"
+                            insideVariableStringMap.clear()
+                            insideVariableDoubleMap.clear()
+                            insideVariableCoordPair.clear()
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+        return false
     }
 
     // Point ::= point Coordinate
@@ -1191,27 +1276,69 @@ class Parser(private val scanner: Scanner) {
     }
 
     // Bend ::= bend ( Coordinate , Coordinate, Angle )
-    fun Bend(): Boolean {
-        if (recognizeTerminal(BEND)) {
-            return recognizeTerminal(LPAREN) && Coordinate().first && recognizeTerminal(COMMA) && Coordinate().first && recognizeTerminal(COMMA) && Angle() && recognizeTerminal(RPAREN)
+    fun Bend(): Triple<Boolean, MutableList<Coordinate>?, Double?> {
+        if (recognizeTerminal(BEND) && recognizeTerminal(LPAREN)) {
+            var bendCoord: MutableList<Coordinate> = mutableListOf()
+            var first = Coordinate()
+            if (first.first) {
+                var newCoord = Coordinate("bendFirst", first.second!!, first.third!!)
+                bendCoord.add(newCoord)
+                if (recognizeTerminal(COMMA)) {
+                    var second = Coordinate()
+                    if (second.first) {
+                        newCoord = Coordinate("bendSecond", second.second!!, second.third!!)
+                        bendCoord.add(newCoord)
+                        if (recognizeTerminal(COMMA) && ((last?.symbol == INT) || (last?.symbol == DOUBLE) || (last?.symbol == VAR))) {
+                            val an = Angle()
+                            if (an.first) {
+                                val angle = an.second
+                                if (recognizeTerminal(RPAREN)) {
+                                    return Triple(true, bendCoord, angle)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-        return false
+        return Triple(false, null, null)
     }
 
     // Line ::= ( Coordinate , Coordinate )
-    fun Line(): Boolean {
-        if (recognizeTerminal(LINE)) {
-            return recognizeTerminal(LPAREN) && Coordinate().first && recognizeTerminal(COMMA) && Coordinate().first && recognizeTerminal(RPAREN)
+    fun Line(): Triple<Boolean, Coordinate?, Coordinate?> {
+        if (recognizeTerminal(LINE) && recognizeTerminal(LPAREN)) {
+            var first = Coordinate()
+            if (first.first) {
+                val fCoord = Coordinate("first", first.second!!, first.third!!)
+                if (recognizeTerminal(COMMA)) {
+                    val second = Coordinate()
+                    if (second.first) {
+                        val sCoord = Coordinate("second", second.second!!, second.third!!)
+                        if (recognizeTerminal(RPAREN)) {
+                            return Triple(true, fCoord, sCoord)
+                        }
+                    }
+                }
+            }
         }
-        return false
+        return Triple(false, null, null)
     }
 
     // Circle ::= circle ( Coordinate, IntExpr )
-    fun Circle(): Boolean {
-        if (recognizeTerminal(CIRCLE)) {
-            return recognizeTerminal(LPAREN) && Coordinate().first && recognizeTerminal(COMMA) && DoubleExpr().first && recognizeTerminal(RPAREN)
+    fun Circle(): Triple<Boolean, Coordinate?, Double?> {
+        if (recognizeTerminal(CIRCLE) && recognizeTerminal(LPAREN)) {
+            var coord = Coordinate()
+            if (coord.first) {
+                val coordinate = Coordinate("center", coord.second!!, coord.third!!)
+                if (recognizeTerminal(COMMA) && ((last?.symbol == INT) || (last?.symbol == VAR) || (last?.symbol == DOUBLE))) {
+                    var double = DoubleExpr()
+                    if (double.first && recognizeTerminal(RPAREN)) {
+                        return Triple(true, coordinate, double.second)
+                    }
+                }
+            }
         }
-        return false
+        return Triple(false, null, null)
     }
 
     // Coordinate ::= ( Coordinate' | var
@@ -1568,14 +1695,17 @@ class Parser(private val scanner: Scanner) {
 
     // Angle ::= DoubleExpr | var
 
-    private fun Angle(): Boolean {
-        if (DoubleExpr().first) {
-            return true
+    private fun Angle(): Pair<Boolean, Double?> {
+        var double = DoubleExpr()
+        if (double.first) {
+            return Pair(true, double.second)
         } else if (last?.symbol == VAR) {
             val stringValue = last?.lexeme
             recognizeTerminal(VAR)
-            return variableDoubleMap.keys.find { it == stringValue } != null
-        } else return false
+            var value = variableDoubleMap[stringValue]
+            return Pair(variableDoubleMap.keys.find { it == stringValue } != null, value)
+        }
+        return Pair(false, null)
     }
 
     // Address ::= address = Address'
@@ -1662,6 +1792,44 @@ class Parser(private val scanner: Scanner) {
             return null
         }
         return null
+    }
+
+    fun generateCirclePolygon(center: Coordinate, radius: Double, numPoints: Int): List<Coordinate> {
+        val coordinates = mutableListOf<Coordinate>()
+        val angleIncrement = 4 * PI / numPoints
+
+        for (i in 0 until numPoints) {
+            val angle = i * angleIncrement
+            val x = center.longtitude + radius * cos(angle)
+            val y = center.latitude + radius * sin(angle)
+            coordinates.add(Coordinate("coord", x, y))
+        }
+
+        return coordinates
+    }
+
+    fun generateGeoJSONCurve(coords: Pair<Coordinate, Coordinate>, angle: Double): List<Coordinate> {
+        val start = coords.first
+        val end = coords.second
+
+        val angleRad = angle * PI / 180.0
+
+        val distance = Math.hypot(end.longtitude - start.longtitude, end.latitude - start.latitude)
+
+        val midX = (start.longtitude + end.longtitude) / 2.0
+        val midY = (start.latitude + end.latitude) / 2.0
+
+        val offset = distance * 0.1
+
+        val control1X = midX + offset * cos(angleRad)
+        val control1Y = midY + offset * sin(angleRad)
+
+        val coordinates = mutableListOf<Coordinate>()
+        coordinates.add(start)
+        coordinates.add(Coordinate("coord", control1X, control1Y))
+        coordinates.add(Coordinate("coord", control1X, control1Y))
+
+        return coordinates
     }
 
     private fun recognizeTerminal(value: Int) =

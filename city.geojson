@@ -4,6 +4,25 @@
 	{
   		"type": "Feature",
   		"properties": {
+			"element": "Street",
+			"name": "Smetanova ulica"
+		},
+  		"geometry": {
+			"type": "LineString",
+			"coordinates": [
+        		[15.638, 46.5599],
+        		[15.640809927949853, 46.559968771866224],
+        		[15.640809927949853, 46.559968771866224],
+        		[15.6436, 46.5589],
+        		[15.6452, 46.5589]
+    	  ]
+  		}
+	  },
+
+	{
+  		"type": "Feature",
+  		"properties": {
+			"element": "Institution",
 			"name": "SNG",
 			"address": "Ulica",
 			"events":12.0
@@ -25,6 +44,7 @@
 	{
   		"type": "Feature",
   		"properties": {
+			"element": "Square",
 			"name": "Glavni"
 		},
   		"geometry": {
@@ -44,11 +64,38 @@
 	{
   		"type": "Feature",
   		"properties": {
-			"name": "Jezero"
+			"element": "Statue",
+			"name": "Statue"
 		},
   		"geometry": {
 			"type": "Point",
 			"coordinates": [15.649512, 46.556204]
+  		}
+	  },
+
+	{
+  		"type": "Feature",
+  		"properties": {
+			"element": "Lake",
+			"name": "Jezero"
+		},
+  		"geometry": {
+			"type": "Polygon",
+			"coordinates": [
+      		[
+        		[15.6495, 46.5641],
+        		[15.649793892626146, 46.56400450849719],
+        		[15.649975528258148, 46.56375450849719],
+        		[15.649975528258148, 46.56344549150281],
+        		[15.649793892626146, 46.56319549150281],
+        		[15.6495, 46.5631],
+        		[15.649206107373853, 46.56319549150281],
+        		[15.649024471741852, 46.56344549150281],
+        		[15.649024471741852, 46.56375450849719],
+        		[15.649206107373853, 46.56400450849719],
+        		[15.6495, 46.5641]
+      		]
+    	  ]
   		}
 	  }
 	]
