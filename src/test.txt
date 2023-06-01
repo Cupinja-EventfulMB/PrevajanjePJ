@@ -1,48 +1,23 @@
 city "Maribor City 123" {
-    string A = "This is a string"
-    string B = "This is the second"
-    int C = 12 + 2
-    int D = C
-    double Q = 12.134
-    coordinate D = (1+3-2, Q)
-    if (C == 14) {
-        string L = "cece"
-    }
 
-    if (C < 14) {
-        string A = "cece"
-    } else {
-        string A = "ne"
-        if (D == 14) {
-            string P = "if in if"
-        }
-    }
+   street "Smetanova ulica" {
 
-    street "Smetanova ulica" {
-        int R = 12 + C - 1 + 2
-        if (C < 14) {
-            int L = 2
-        }
-        bend((1,2),(fst(D),4), R)
-        line((1,2),(1,4))
-    }
+       bend((46.556204, 15.649512),(46.556204, 15.649561), 2)
+       line((46.556204, 15.649512),(46.556204, 15.649561))
+   }
 
-    institution "SNG" {
-        address = A
-        events = 11 + 1
-        block((1,2),(3,4),(5,1),(7,8))
-    }
+   institution "SNG" {
+       address = "Ulica"
+       events = 12
+       block((46.56015, 15.6435),(46.56015, 15.6443),(46.5595, 15.6443),(46.5595, 15.6435))
+   }
 
-    square "Glavni"{
-        block((1,2),(3,4),(5,6),(7,8))
-    }
+   square "Glavni"{
+       block((46.556204, 15.649512),(46.556359, 15.649669),(46.556293, 15.649823),(46.556448, 15.649977))
+   }
 
-    statue "Jezero"{
-        point(1,2)
-    }
-
-    lake "Jezero"{
-        circle( (1,2), 3+3)
-    }
+   statue "Jezero"{
+       point(46.556204, 15.649512)
+   }
 
 }

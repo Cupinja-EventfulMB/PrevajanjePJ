@@ -622,6 +622,8 @@ data class Coordinate(val name: String, var longtitude: Double, var latitude: Do
 
 class Parser(private val scanner: Scanner) {
     private var last: Token? = null
+    private var geoJSON : String = "{\n\t\"type\": \"FeatureCollection\",\n\t\"features\": ["
+    var fileName = "city.geojson"
 
     private val variableStringMap = mutableMapOf<String, String>()
     private val variableDoubleMap = mutableMapOf<String, Double>()
@@ -637,7 +639,7 @@ class Parser(private val scanner: Scanner) {
         last = scanner.getToken()
         val status = City()
 
-        println("Elements in variableStringMap:")
+       /* println("Elements in variableStringMap:")
         for ((key, value) in variableStringMap) {
             println("$key -> $value")
         }
@@ -657,6 +659,11 @@ class Parser(private val scanner: Scanner) {
             println(coordinate)
         }
 
+        */
+        var file = File(fileName)
+        file.createNewFile()
+        geoJSON += "\t]\n}"
+        file.writeText(geoJSON)
         return when (last?.symbol) {
             EOF_SYMBOL -> status
             else -> false
@@ -965,12 +972,55 @@ class Parser(private val scanner: Scanner) {
     // Institution ::= institution string { InsideOperations Address InsideOperations Events InsideOperations Block }
 
     fun Institution(): Boolean {
-        if (recognizeTerminal(INSTITUTION) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Address() && Events() && Block() && recognizeTerminal(RCPAREN)) {
-            insideVariableStringMap.clear()
-            insideVariableDoubleMap.clear()
-            insideVariableCoordPair.clear()
-            return true
-        } else return false
+        if (recognizeTerminal(INSTITUTION)) {
+            if (last?.symbol == STRING) {
+                var name = last?.lexeme
+                name = name!!.substring(1, name.length -1)
+                recognizeTerminal(STRING)
+                if (recognizeTerminal(LCPAREN) && InsideOperations(true)) {
+                    var address = Address()
+                    if (address.first) {
+                        var ad = address.second
+                        ad = ad!!.substring(1, ad.length - 1)
+                        var events = Events()
+                        if (events.first) {
+                            var ev = events.second
+                            var block = Block()
+                            if (block.first) {
+                                var list = block.second
+                                if (recognizeTerminal(RCPAREN)) {
+                                    geoJSON += "\n\t{\n" +
+                                            "  \t\t\"type\": \"Feature\",\n" +
+                                            "  \t\t\"properties\": {\n" +
+                                            "\t\t\t\"name\": \"" + name + "\",\n" +
+                                            "\t\t\t\"address\": \"" + ad + "\",\n" +
+                                            "\t\t\t\"events\":" + ev + "\n" +
+                                            "\t\t},\n" +
+                                            "  \t\t\"geometry\": {\n" +
+                                            "\t\t\t\"type\": \"Polygon\",\n" +
+                                            "\t\t\t\"coordinates\": [\n" +
+                                            "      \t\t[\n" +
+                                            "        \t\t[" + (list?.get(0)!!.latitude) + ", " + (list?.get(0)!!.longtitude) + "],\n" +
+                                            "        \t\t[" + (list?.get(1)!!.latitude) + ", " + (list?.get(1)!!.longtitude) + "],\n" +
+                                            "        \t\t[" + (list?.get(2)!!.latitude) + ", " + (list?.get(2)!!.longtitude) + "],\n" +
+                                            "        \t\t[" + (list?.get(3)!!.latitude) + ", " + (list?.get(3)!!.longtitude) + "],\n" +
+                                            "        \t\t[" + (list?.get(0)!!.latitude) + ", " + (list?.get(0)!!.longtitude) + "]\n" +
+                                            "      \t\t]\n" +
+                                            "    \t  ]\n" +
+                                            "  \t\t}\n" +
+                                            "\t  },\n"
+                                    insideVariableStringMap.clear()
+                                    insideVariableDoubleMap.clear()
+                                    insideVariableCoordPair.clear()
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false
     }
 
     // Institution' ::= Institutions | e
@@ -991,12 +1041,44 @@ class Parser(private val scanner: Scanner) {
 
     // Square ::= square string { InsideOperations Block }
     fun Square(): Boolean {
-        if (recognizeTerminal(SQUARE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Block() && recognizeTerminal(RCPAREN)) {
-            insideVariableStringMap.clear()
-            insideVariableDoubleMap.clear()
-            insideVariableCoordPair.clear()
-            return true
-        } else return false
+        if (recognizeTerminal(SQUARE)) {
+            if (last?.symbol == STRING) {
+                var name = last?.lexeme
+                name = name!!.substring(1, name.length - 1)
+                recognizeTerminal(STRING)
+                if (recognizeTerminal(LCPAREN) && InsideOperations(true)) {
+                    var block = Block()
+                    if (block.first) {
+                        if (recognizeTerminal(RCPAREN)) {
+                            var list = block.second
+                            geoJSON += "\n\t{\n" +
+                                    "  \t\t\"type\": \"Feature\",\n" +
+                                    "  \t\t\"properties\": {\n" +
+                                    "\t\t\t\"name\": \"" + name + "\"\n" +
+                                    "\t\t},\n" +
+                                    "  \t\t\"geometry\": {\n" +
+                                    "\t\t\t\"type\": \"Polygon\",\n" +
+                                    "\t\t\t\"coordinates\": [\n" +
+                                    "      \t\t[\n" +
+                                    "        \t\t[" + (list?.get(0)!!.latitude) + ", " + (list?.get(0)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (list?.get(1)!!.latitude) + ", " + (list?.get(1)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (list?.get(2)!!.latitude) + ", " + (list?.get(2)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (list?.get(3)!!.latitude) + ", " + (list?.get(3)!!.longtitude) + "],\n" +
+                                    "        \t\t[" + (list?.get(0)!!.latitude) + ", " + (list?.get(0)!!.longtitude) + "]\n" +
+                                    "      \t\t]\n" +
+                                    "    \t  ]\n" +
+                                    "  \t\t}\n" +
+                                    "\t  },\n"
+                            insideVariableStringMap.clear()
+                            insideVariableDoubleMap.clear()
+                            insideVariableCoordPair.clear()
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+        return false
     }
 
     // Statues ::= Statue Statues | e
@@ -1008,12 +1090,40 @@ class Parser(private val scanner: Scanner) {
 
     // Statue ::= statue string { InsideOperations Point }
     fun Statue(): Boolean {
-        if (recognizeTerminal(STATUE) && recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Point() && recognizeTerminal(RCPAREN)) {
+        if (recognizeTerminal(STATUE)) {
+            if (last?.symbol == STRING) {
+                var name = last?.lexeme
+                name = name!!.substring(1, name.length - 1)
+                recognizeTerminal(STRING)
+                if (recognizeTerminal(LCPAREN) && InsideOperations(true)) {
+                    var point = Point()
+                    if (point.first && recognizeTerminal(RCPAREN)) {
+
+                        geoJSON += "\n\t{\n" +
+                                "  \t\t\"type\": \"Feature\",\n" +
+                                "  \t\t\"properties\": {\n" +
+                                "\t\t\t\"name\": \"" + name + "\"\n" +
+                                "\t\t},\n" +
+                                "  \t\t\"geometry\": {\n" +
+                                "\t\t\t\"type\": \"Point\",\n" +
+                                "\t\t\t\"coordinates\": [" + (point.second!!.latitude) + ", " + (point.second!!.longtitude) + "]\n" +
+                                "  \t\t}\n" +
+                                "\t  },\n"
+                        insideVariableStringMap.clear()
+                        insideVariableDoubleMap.clear()
+                        insideVariableCoordPair.clear()
+                        return true
+                    }
+                }
+            }
+
+            /*&& recognizeTerminal(STRING) && recognizeTerminal(LCPAREN) && InsideOperations(true) && Point() && recognizeTerminal(RCPAREN)) {
             insideVariableStringMap.clear()
             insideVariableDoubleMap.clear()
             insideVariableCoordPair.clear()
-            return true
-        } else return false
+            return true */
+        }
+        return false
     }
 
     // Lakes ::= Lake Lakes | e
@@ -1035,19 +1145,49 @@ class Parser(private val scanner: Scanner) {
 
     // Point ::= point Coordinate
 
-    fun Point(): Boolean {
+    fun Point(): Pair<Boolean,Coordinate?> {
         if (recognizeTerminal(POINT)) {
-            return Coordinate().first
+            var coordinate = Coordinate()
+            var cord = Coordinate("point", coordinate.second!!, coordinate.third!!)
+            return Pair(coordinate.first, cord)
         }
-        return false
+        return Pair(false, null)
     }
 
     // Block ::= block ( Coordinate , Coordinate , Coordinate , Coordinate )
-    fun Block(): Boolean {
-        if (recognizeTerminal(BLOCK)) {
-            return recognizeTerminal(LPAREN) && Coordinate().first && recognizeTerminal(COMMA) && Coordinate().first && recognizeTerminal(COMMA) && Coordinate().first && recognizeTerminal(COMMA) && Coordinate().first && recognizeTerminal(RPAREN)
+    fun Block(): Pair<Boolean, MutableList<Coordinate>?> {
+        if (recognizeTerminal(BLOCK) && recognizeTerminal(LPAREN)) {
+            var blockCoord: MutableList<Coordinate> = mutableListOf()
+            var c1 = Coordinate()
+            if (c1.first) {
+                var newCoord = Coordinate("first", c1.second!!, c1.third!!)
+                blockCoord.add(newCoord)
+                if (recognizeTerminal(COMMA)) {
+                    var c2 = Coordinate()
+                    if (c2.first) {
+                        newCoord = Coordinate("second", c2.second!!, c2.third!!)
+                        blockCoord.add(newCoord)
+                        if (recognizeTerminal(COMMA)) {
+                            var c3 = Coordinate()
+                            if (c3.first) {
+                                newCoord = Coordinate("third", c3.second!!, c3.third!!)
+                                blockCoord.add(newCoord)
+                                if (recognizeTerminal(COMMA)) {
+                                    var c4 = Coordinate()
+                                    if (c4.first) {
+                                        newCoord = Coordinate("four", c4.second!!, c4.third!!)
+                                        blockCoord.add(newCoord)
+                                        if (recognizeTerminal(RPAREN))
+                                            return Pair(true, blockCoord)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-        return false
+        return Pair(false, null)
     }
 
     // Bend ::= bend ( Coordinate , Coordinate, Angle )
@@ -1441,10 +1581,12 @@ class Parser(private val scanner: Scanner) {
     // Address ::= address = Address'
     // Address' ::= string | var
 
-    private fun Address(): Boolean {
+    private fun Address(): Pair<Boolean, String?> {
         if (recognizeTerminal(ADDRESS) && recognizeTerminal(ASSIGN)) {
-            if (recognizeTerminal(STRING)) {
-                return true
+            if (last?.symbol == STRING) {
+                var string = last?.lexeme
+                recognizeTerminal(STRING)
+                return Pair(true, string)
             } else if (last?.symbol == VAR) {
                 val stringValue = last?.lexeme
                 recognizeTerminal(VAR)
@@ -1452,27 +1594,33 @@ class Parser(private val scanner: Scanner) {
                 if (foundValue == null) {
                     foundValue = variableStringMap.keys.find { it == stringValue }
                 }
-                return foundValue != null
-            } else return false
-        } else return false
+                return Pair(foundValue != null, foundValue)
+            }
+        }
+        return Pair(false, null)
     }
 
     // Events ::= events = Events'
     // Events' ::= IntExpr | var
-    private fun Events(): Boolean {
+    private fun Events(): Pair<Boolean, Double?> {
         if (recognizeTerminal(EVENTS) && recognizeTerminal(ASSIGN)) {
-            if (DoubleExpr().first) {
-                return true
+            var expr = DoubleExpr()
+            if (expr.first) {
+                return Pair(true, expr.second)
             } else if (last?.symbol == VAR) {
                 val stringValue = last?.lexeme
+                var value : Double? = null
                 recognizeTerminal(VAR)
                 var foundValue = insideVariableDoubleMap.keys.find { it == stringValue }
+                if (foundValue != null) value = insideVariableDoubleMap[foundValue]
                 if (foundValue == null) {
                     foundValue = variableDoubleMap.keys.find { it == stringValue }
+                    value = variableDoubleMap[foundValue]
                 }
-                return foundValue != null
-            } else return false
-        } else return false
+                return Pair(foundValue != null, value)
+            }
+        }
+        return Pair(false, null)
     }
 
     // First ::= fst(var)
